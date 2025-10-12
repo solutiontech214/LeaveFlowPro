@@ -1,58 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { StudentDashboard } from "@/components/StudentDashboard";
 import { FacultyDashboard } from "@/components/FacultyDashboard";
 import { DutyLeaveForm } from "@/components/DutyLeaveForm";
 import { LoginPage } from "@/components/LoginPage";
 import { useToast } from "@/hooks/use-toast";
-
-//todo: remove mock functionality
-type UserRole = "student" | "faculty";
-type FacultyType = "CC" | "HOD" | "VP";
-
-interface User {
-  name: string;
-  email: string;
-  role: UserRole;
-  facultyType?: FacultyType;
-  rollNo?: string;
-  department?: string;
-  division?: string;
-  attendancePercentage?: number;
-}
+import { login, logout, getCurrentUser, type User } from "@/lib/auth";
+import { submitDLApplication } from "@/lib/api";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [showApplyForm, setShowApplyForm] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const handleLogin = (email: string, password: string, role: UserRole) => {
-    //todo: remove mock functionality
-    if (role === "student") {
-      setUser({
-        name: "Rahul Sharma",
-        email,
-        role: "student",
-        rollNo: "CS21B001",
-        department: "Computer Science",
-        division: "A",
-        attendancePercentage: 82,
+  useEffect(() => {
+    // Check if user is already logged in
+    getCurrentUser().then((u) => {
+      setUser(u);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleLogin = async (email: string, password: string, role: "student" | "faculty") => {
+    try {
+      const { user: loggedInUser } = await login(email, password, role);
+      setUser(loggedInUser);
+      toast({
+        title: "Login Successful",
+        description: `Welcome ${loggedInUser.name}!`,
       });
-    } else {
-      setUser({
-        name: "Dr. Anjali Desai",
-        email,
-        role: "faculty",
-        facultyType: "CC",
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive",
       });
     }
-    toast({
-      title: "Login Successful",
-      description: `Welcome ${role === "student" ? "Rahul Sharma" : "Dr. Anjali Desai"}!`,
-    });
   };
 
   const handleLogout = () => {
+    logout();
     setUser(null);
     setShowApplyForm(false);
     toast({
@@ -61,14 +49,52 @@ export default function Home() {
     });
   };
 
-  const handleApplySubmit = (data: any) => {
-    console.log("Application submitted:", data);
-    toast({
-      title: "Application Submitted",
-      description: "Your duty leave application has been submitted successfully.",
-    });
-    setShowApplyForm(false);
+  const handleApplySubmit = async (formData: any) => {
+    if (!user) return;
+
+    try {
+      // Format additional students to array of strings
+      const additionalStudents = formData.additionalStudents
+        .filter((s: any) => s.name && s.rollNo)
+        .map((s: any) => `${s.name} (${s.rollNo})`);
+
+      await submitDLApplication({
+        studentId: user.id,
+        studentName: user.name,
+        rollNo: user.rollNo!,
+        department: user.department!,
+        division: user.division!,
+        numberOfDays: parseInt(formData.numberOfDays),
+        reason: formData.reason,
+        dateFrom: formData.dateFrom,
+        dateTo: formData.dateTo,
+        additionalStudents: additionalStudents.length > 0 ? additionalStudents : undefined,
+      });
+
+      toast({
+        title: "Application Submitted",
+        description: "Your duty leave application has been submitted successfully.",
+      });
+      setShowApplyForm(false);
+    } catch (error: any) {
+      toast({
+        title: "Submission Failed",
+        description: error.message || "Failed to submit application",
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <LoginPage onLogin={handleLogin} />;
@@ -84,7 +110,7 @@ export default function Home() {
       />
       <main className="container mx-auto px-4 py-8">
         {user.role === "student" && !showApplyForm && (
-          <StudentDashboard onApplyClick={() => setShowApplyForm(true)} />
+          <StudentDashboard onApplyClick={() => setShowApplyForm(true)} userId={user.id} />
         )}
         {user.role === "student" && showApplyForm && (
           <div className="space-y-6">

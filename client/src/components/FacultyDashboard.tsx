@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { ApplicationCard } from "./ApplicationCard";
@@ -15,8 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { getPendingApplications, getAllApplications, approveOrRejectApplication } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
-//todo: remove mock functionality
 interface Application {
   id: string;
   studentName: string;
@@ -26,77 +27,46 @@ interface Application {
   reason: string;
   dateFrom: string;
   dateTo: string;
-  status: "pending" | "approved" | "rejected";
-  submittedDate: string;
-  additionalStudents?: string[];
+  overallStatus: string;
+  createdAt: string;
+  additionalStudents?: string[] | null;
 }
-
-const mockApplications: Application[] = [
-  {
-    id: "1",
-    studentName: "Priya Patel",
-    rollNo: "EC21B015",
-    department: "Electronics",
-    numberOfDays: 1,
-    reason: "Attending workshop on IoT at Tech Hub",
-    dateFrom: "2024-01-22",
-    dateTo: "2024-01-22",
-    status: "pending",
-    submittedDate: "2024-01-20",
-  },
-  {
-    id: "2",
-    studentName: "Amit Kumar",
-    rollNo: "ME21B042",
-    department: "Mechanical",
-    numberOfDays: 2,
-    reason: "Industrial training at Manufacturing Plant",
-    dateFrom: "2024-01-25",
-    dateTo: "2024-01-26",
-    status: "pending",
-    submittedDate: "2024-01-19",
-    additionalStudents: ["Rohit Singh"],
-  },
-  {
-    id: "3",
-    studentName: "Sneha Reddy",
-    rollNo: "CS21B028",
-    department: "Computer Science",
-    numberOfDays: 1,
-    reason: "Seminar on AI/ML at University",
-    dateFrom: "2024-01-18",
-    dateTo: "2024-01-18",
-    status: "approved",
-    submittedDate: "2024-01-15",
-  },
-  {
-    id: "4",
-    studentName: "Vikram Shah",
-    rollNo: "EC21B033",
-    department: "Electronics",
-    numberOfDays: 1,
-    reason: "Personal reasons",
-    dateFrom: "2024-01-16",
-    dateTo: "2024-01-16",
-    status: "rejected",
-    submittedDate: "2024-01-14",
-  },
-];
 
 interface FacultyDashboardProps {
   facultyType: "CC" | "HOD" | "VP";
 }
 
 export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
-  const [applications, setApplications] = useState(mockApplications);
+  const [applications, setApplications] = useState<Application[]>([]);
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
   const [action, setAction] = useState<"approve" | "reject" | null>(null);
   const [remarks, setRemarks] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadApplications();
+  }, [facultyType]);
+
+  const loadApplications = async () => {
+    try {
+      const data = await getAllApplications();
+      setApplications(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load applications",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const stats = {
-    pending: applications.filter((a) => a.status === "pending").length,
-    approved: applications.filter((a) => a.status === "approved").length,
-    rejected: applications.filter((a) => a.status === "rejected").length,
+    pending: applications.filter((a) => a.overallStatus === "pending").length,
+    approved: applications.filter((a) => a.overallStatus === "approved").length,
+    rejected: applications.filter((a) => a.overallStatus === "rejected").length,
   };
 
   const handleAction = (id: string, type: "approve" | "reject") => {
@@ -104,19 +74,28 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
     setAction(type);
   };
 
-  const confirmAction = () => {
+  const confirmAction = async () => {
     if (selectedApp && action) {
-      setApplications(
-        applications.map((app) =>
-          app.id === selectedApp
-            ? { ...app, status: action === "approve" ? "approved" : "rejected" }
-            : app
-        )
-      );
-      console.log(`${action} application ${selectedApp} with remarks:`, remarks);
-      setSelectedApp(null);
-      setAction(null);
-      setRemarks("");
+      try {
+        await approveOrRejectApplication(selectedApp, action, remarks);
+        toast({
+          title: action === "approve" ? "Application Approved" : "Application Rejected",
+          description: `The application has been ${action}d successfully.`,
+        });
+        
+        // Reload applications
+        await loadApplications();
+        
+        setSelectedApp(null);
+        setAction(null);
+        setRemarks("");
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to process application",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -125,6 +104,28 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
     HOD: "Head of Department",
     VP: "Vice Principal",
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const mapApplication = (app: Application) => ({
+    ...app,
+    status: app.overallStatus as "pending" | "approved" | "rejected",
+    submittedDate: formatDate(app.createdAt),
+    additionalStudents: app.additionalStudents || undefined,
+  });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading applications...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -156,18 +157,18 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
         </TabsList>
 
         <TabsContent value="pending" className="mt-6 space-y-4">
-          {applications.filter((a) => a.status === "pending").length === 0 ? (
+          {applications.filter((a) => a.overallStatus === "pending").length === 0 ? (
             <div className="rounded-lg border border-dashed p-12 text-center">
               <Clock className="mx-auto h-12 w-12 text-muted-foreground" />
               <p className="mt-4 text-muted-foreground">No pending applications</p>
             </div>
           ) : (
             applications
-              .filter((a) => a.status === "pending")
+              .filter((a) => a.overallStatus === "pending")
               .map((app) => (
                 <ApplicationCard
                   key={app.id}
-                  application={app}
+                  application={mapApplication(app)}
                   showActions
                   onApprove={(id) => handleAction(id, "approve")}
                   onReject={(id) => handleAction(id, "reject")}
@@ -178,17 +179,17 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
 
         <TabsContent value="approved" className="mt-6 space-y-4">
           {applications
-            .filter((a) => a.status === "approved")
+            .filter((a) => a.overallStatus === "approved")
             .map((app) => (
-              <ApplicationCard key={app.id} application={app} />
+              <ApplicationCard key={app.id} application={mapApplication(app)} />
             ))}
         </TabsContent>
 
         <TabsContent value="rejected" className="mt-6 space-y-4">
           {applications
-            .filter((a) => a.status === "rejected")
+            .filter((a) => a.overallStatus === "rejected")
             .map((app) => (
-              <ApplicationCard key={app.id} application={app} />
+              <ApplicationCard key={app.id} application={mapApplication(app)} />
             ))}
         </TabsContent>
       </Tabs>

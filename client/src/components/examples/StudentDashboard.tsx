@@ -5,7 +5,10 @@ export default function StudentDashboardExample() {
   return (
     <ThemeProvider>
       <div className="min-h-screen bg-background p-8">
-        <StudentDashboardComponent onApplyClick={() => console.log("Apply for leave clicked")} />
+        <StudentDashboardComponent 
+          onApplyClick={() => console.log("Apply for leave clicked")} 
+          userId="demo-user-id"
+        />
       </div>
     </ThemeProvider>
   );
