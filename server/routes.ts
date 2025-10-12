@@ -1,15 +1,372 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import nodemailer from "nodemailer";
+import {
+  loginSchema,
+  insertStudentSchema,
+  insertDLApplicationSchema,
+  approvalSchema,
+} from "@shared/schema";
+
+const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production";
+
+// Email transporter setup
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
+
+// Middleware to verify JWT token
+function authenticateToken(req: Request, res: Response, next: Function) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Access token required" });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+    if (err) {
+      return res.status(403).json({ error: "Invalid or expired token" });
+    }
+    (req as any).user = user;
+    next();
+  });
+}
+
+// Helper function to send email notifications
+async function sendApprovalEmail(
+  toEmail: string,
+  studentName: string,
+  numberOfDays: number,
+  reason: string,
+  role: string
+) {
+  try {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+      console.log("Email credentials not configured, skipping email notification");
+      return;
+    }
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: toEmail,
+      subject: `New Duty Leave Application - ${studentName}`,
+      html: `
+        <h2>New Duty Leave Application Requires Your Approval</h2>
+        <p><strong>Student Name:</strong> ${studentName}</p>
+        <p><strong>Number of Days:</strong> ${numberOfDays}</p>
+        <p><strong>Reason:</strong> ${reason}</p>
+        <p><strong>Your Role:</strong> ${role}</p>
+        <br/>
+        <p>Please log in to the Duty Leave Management System to review and approve/reject this application.</p>
+        <p><a href="${process.env.APP_URL || 'http://localhost:5000'}">Go to Dashboard</a></p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log(`Email sent to ${toEmail} (${role})`);
+  } catch (error) {
+    console.error("Error sending email:", error);
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // Authentication routes
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      const { email, password } = loginSchema.parse(req.body);
+      const role = req.body.role as "student" | "faculty";
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+      let user: any;
+      let userData: any;
+
+      if (role === "student") {
+        user = await storage.getStudentByEmail(email);
+        if (!user) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        userData = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: "student",
+          rollNo: user.rollNo,
+          department: user.department,
+          division: user.division,
+          attendancePercentage: user.attendancePercentage,
+        };
+      } else {
+        user = await storage.getFacultyByEmail(email);
+        if (!user) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+          return res.status(401).json({ error: "Invalid credentials" });
+        }
+
+        userData = {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: "faculty",
+          facultyType: user.role,
+          department: user.department,
+        };
+      }
+
+      const token = jwt.sign(userData, JWT_SECRET, { expiresIn: "24h" });
+      res.json({ token, user: userData });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Login failed" });
+    }
+  });
+
+  // Student registration (for testing)
+  app.post("/api/auth/register-student", async (req: Request, res: Response) => {
+    try {
+      const data = insertStudentSchema.parse(req.body);
+      const hashedPassword = await bcrypt.hash(data.password, 10);
+
+      const student = await storage.createStudent({
+        ...data,
+        password: hashedPassword,
+      });
+
+      res.json({ message: "Student registered successfully", id: student.id });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || "Registration failed" });
+    }
+  });
+
+  // Get current user info
+  app.get("/api/auth/me", authenticateToken, (req: Request, res: Response) => {
+    res.json({ user: (req as any).user });
+  });
+
+  // DL Application routes
+  app.post(
+    "/api/applications",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        if (user.role !== "student") {
+          return res.status(403).json({ error: "Only students can apply" });
+        }
+
+        const student = await storage.getStudent(user.id);
+        if (!student) {
+          return res.status(404).json({ error: "Student not found" });
+        }
+
+        if (student.attendancePercentage < 75) {
+          return res.status(400).json({
+            error: "Attendance below 75%, not eligible to apply",
+          });
+        }
+
+        const data = insertDLApplicationSchema.parse(req.body);
+        const application = await storage.createApplication(data);
+
+        // Determine which faculty to notify based on number of days
+        const numberOfDays = parseInt(data.numberOfDays as any);
+
+        // Always notify CC
+        const cc = await storage.getFacultyByRole("CC", student.department);
+        if (cc) {
+          await sendApprovalEmail(
+            cc.email,
+            student.name,
+            numberOfDays,
+            data.reason,
+            "Class Coordinator"
+          );
+        }
+
+        // Notify HOD if 2+ days
+        if (numberOfDays >= 2) {
+          const hod = await storage.getFacultyByRole("HOD", student.department);
+          if (hod) {
+            await sendApprovalEmail(
+              hod.email,
+              student.name,
+              numberOfDays,
+              data.reason,
+              "Head of Department"
+            );
+          }
+        }
+
+        // Notify VP if >2 days
+        if (numberOfDays > 2) {
+          const vp = await storage.getFacultyByRole("VP");
+          if (vp) {
+            await sendApprovalEmail(
+              vp.email,
+              student.name,
+              numberOfDays,
+              data.reason,
+              "Vice Principal"
+            );
+          }
+        }
+
+        res.json(application);
+      } catch (error: any) {
+        res.status(400).json({ error: error.message || "Failed to create application" });
+      }
+    }
+  );
+
+  // Get applications for student
+  app.get(
+    "/api/applications/my",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        if (user.role !== "student") {
+          return res.status(403).json({ error: "Only students can access this" });
+        }
+
+        const applications = await storage.getApplicationsByStudent(user.id);
+        res.json(applications);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+
+  // Get applications for faculty (based on role)
+  app.get(
+    "/api/applications/pending",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        if (user.role !== "faculty") {
+          return res.status(403).json({ error: "Only faculty can access this" });
+        }
+
+        let applications: any[] = [];
+
+        if (user.facultyType === "CC") {
+          applications = await storage.getPendingApplicationsForCC(user.department);
+        } else if (user.facultyType === "HOD") {
+          applications = await storage.getPendingApplicationsForHOD(user.department);
+        } else if (user.facultyType === "VP") {
+          applications = await storage.getPendingApplicationsForVP();
+        }
+
+        res.json(applications);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+
+  // Get all applications for faculty (by status)
+  app.get(
+    "/api/applications/all",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        if (user.role !== "faculty") {
+          return res.status(403).json({ error: "Only faculty can access this" });
+        }
+
+        const status = req.query.status as string;
+        let applications: any[] = [];
+
+        if (status) {
+          applications = await storage.getApplicationsByStatus(status);
+        } else {
+          // Get all applications for the faculty's department
+          const allApplications = await storage.getApplicationsByStatus("pending");
+          const approved = await storage.getApplicationsByStatus("approved");
+          const rejected = await storage.getApplicationsByStatus("rejected");
+          applications = [...allApplications, ...approved, ...rejected];
+        }
+
+        // Filter by department for CC and HOD
+        if (user.facultyType === "CC" || user.facultyType === "HOD") {
+          applications = applications.filter(
+            (app) => app.department === user.department
+          );
+        }
+
+        res.json(applications);
+      } catch (error: any) {
+        res.status(500).json({ error: error.message });
+      }
+    }
+  );
+
+  // Approve/Reject application
+  app.post(
+    "/api/applications/approve",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        if (user.role !== "faculty") {
+          return res.status(403).json({ error: "Only faculty can approve" });
+        }
+
+        const { applicationId, action, remarks } = approvalSchema.parse(req.body);
+        const status = action === "approve" ? "approved" : "rejected";
+
+        let updatedApp;
+
+        if (user.facultyType === "CC") {
+          updatedApp = await storage.updateApplicationCCStatus(
+            applicationId,
+            status,
+            remarks
+          );
+        } else if (user.facultyType === "HOD") {
+          updatedApp = await storage.updateApplicationHODStatus(
+            applicationId,
+            status,
+            remarks
+          );
+        } else if (user.facultyType === "VP") {
+          updatedApp = await storage.updateApplicationVPStatus(
+            applicationId,
+            status,
+            remarks
+          );
+        }
+
+        if (!updatedApp) {
+          return res.status(404).json({ error: "Application not found" });
+        }
+
+        res.json(updatedApp);
+      } catch (error: any) {
+        res.status(400).json({ error: error.message });
+      }
+    }
+  );
 
   const httpServer = createServer(app);
-
   return httpServer;
 }
