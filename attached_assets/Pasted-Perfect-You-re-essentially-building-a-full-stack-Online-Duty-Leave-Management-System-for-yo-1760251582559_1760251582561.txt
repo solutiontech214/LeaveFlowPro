@@ -1,0 +1,205 @@
+Perfect 👍 You’re essentially building a **full-stack “Online Duty Leave Management System”** for your institute using the **MERN stack (MongoDB, Express.js, React.js, Node.js)** with email notifications and role-based dashboards.
+
+Here’s a **powerful and detailed prompt** you can use (for code generation, UI design, or documentation tools like GitHub Copilot, ChatGPT, or Vercel AI SDK):
+
+---
+
+## 🚀 **Prompt for Full-Stack Project Generation (Duty Leave Management System)**
+
+**Title:**
+Online Duty Leave Management System for Institute (MERN Stack)
+
+**Tech Stack:**
+
+* **Frontend:** React.js (JSX), Tailwind CSS / Material UI for professional UI
+* **Backend:** Node.js + Express.js
+* **Database:** MongoDB (Mongoose ORM)
+* **Authentication:** JWT / Passport.js
+* **Email Notifications:** Nodemailer (Gmail SMTP or SendGrid)
+
+---
+
+### **📘 Project Description**
+
+Build an **Online Duty Leave Management System** for a college/institute where students can apply for duty leave (DL) online and faculty members can approve/reject the applications.
+The system should ensure:
+
+* **Role-based access** for Students, Class Coordinators (CC), Heads of Department (HOD), and Vice Principal.
+* **Attendance eligibility check:** Only students with attendance ≥75% can apply for DL (data stored in MongoDB).
+* **Automatic routing and approval workflow** based on number of leave days.
+
+---
+
+### **🧩 Functional Requirements**
+
+#### **Student Module**
+
+* Student login/signup using institute email ID.
+* Fill out **Duty Leave Form** with:
+
+  * Name, Roll No, Department, Division, No. of Days, Purpose, and Date Range.
+  * Option to **Add Another Student** in the same form (using “+ Add Student” button with dynamic input fields).
+* **Validation:** Only students with attendance ≥75% (checked from database) can submit.
+* Submit the form → Email notification automatically sent to respective approver(s).
+* Track application status on dashboard (e.g., “Pending CC Approval”, “Approved by HOD”, “Rejected by CC”, etc.).
+* View all past applications with status history.
+
+#### **Faculty Module**
+
+* Separate dashboards for:
+
+  * **CC (Class Coordinator)** — Approve/Reject 1-day applications.
+  * **HOD** — Approve/Reject 2-day applications.
+  * **Vice Principal** — Approve/Reject more than 2-day applications.
+* Each faculty receives an **email notification** when a DL request requiring their approval is submitted.
+
+  * The email contains a **link** redirecting to the website’s login page.
+* After login, faculty can view:
+
+  * Pending Applications
+  * Approved Applications
+  * Rejected Applications
+* Approve or reject requests with optional remarks.
+
+---
+
+### **📧 Email Workflow**
+
+| No. of DL Days | Approver(s)               | Email Triggered To |
+| -------------- | ------------------------- | ------------------ |
+| 1              | Class Coordinator         | CC Email           |
+| 2              | CC + HOD                  | Both emails        |
+| >2             | CC + HOD + Vice Principal | All three emails   |
+
+* Email Subject: “New Duty Leave Application - [Student Name]”
+* Body: Includes student details, number of days, and link to dashboard.
+
+---
+
+### **🖥️ UI / UX Requirements**
+
+* **Modern Institute Theme:** Blue and white color palette, rounded cards, responsive design.
+* Use **Tailwind CSS** or **Material UI** components.
+* **Navbar:** Logo + Navigation (Home, Apply, Status, Dashboard, Logout).
+* **Dashboard Cards:** Pending, Approved, Rejected counts.
+* **Loading & Toast Notifications:** SweetAlert or React-Toastify for success/error.
+* Use **React Router** for navigation.
+
+---
+
+### **🗂️ Database Design (MongoDB Collections)**
+
+**Students Collection:**
+
+```js
+{
+  name: String,
+  rollNo: String,
+  department: String,
+  division: String,
+  email: String,
+  password: String,
+  attendancePercentage: Number
+}
+```
+
+**Faculty Collection:**
+
+```js
+{
+  name: String,
+  role: String, // 'CC', 'HOD', 'VicePrincipal'
+  department: String,
+  email: String,
+  password: String
+}
+```
+
+**DLApplications Collection:**
+
+```js
+{
+  applicant: ObjectId, // Student ID
+  addedStudents: [String], // Additional names
+  department: String,
+  division: String,
+  numberOfDays: Number,
+  reason: String,
+  dateFrom: Date,
+  dateTo: Date,
+  approvals: {
+    cc: { status: String, date: Date },
+    hod: { status: String, date: Date },
+    vp: { status: String, date: Date }
+  },
+  overallStatus: String, // Pending, Approved, Rejected
+  createdAt: Date
+}
+```
+
+---
+
+### **🔒 Authentication & Authorization**
+
+* **JWT tokens** for secure API communication.
+* Role-based routing in frontend:
+
+  * `/student/dashboard`
+  * `/faculty/dashboard`
+  * `/login`
+  * `/apply-dl`
+
+---
+
+### **🛠️ Extra Features (Optional Enhancements)**
+
+* **PDF generation:** Download approved DL application as a PDF.
+* **Analytics for Admin:** Number of DL requests per month, approval rates, etc.
+* **Dark/Light mode toggle.**
+* **Search and filter** applications by date, department, or status.
+
+---
+
+### **🧠 Example Folder Structure**
+
+```
+/client
+  /src
+    /components
+    /pages
+    /context
+    /utils
+/server
+  /models
+  /routes
+  /controllers
+  /middleware
+  server.js
+```
+
+---
+
+### **🧾 Example User Flow**
+
+1. Student logs in → fills DL form → submits.
+2. System checks attendance ≥75%.
+3. System determines approvers (CC, HOD, VP) based on number of days.
+4. Email notifications sent.
+5. Faculty logs in → sees pending requests → approves/rejects.
+6. Student dashboard updates real-time (pending → approved/rejected).
+7. Student can view status history.
+
+---
+
+### **✨ My Suggestions (Extra Touches)**
+
+✅ Add **timeline-style progress tracker** on student dashboard (Pending → CC Approved → HOD Approved → Final).
+✅ Add **profile picture + institute logo** on all pages.
+✅ Use **Framer Motion animations** for page transitions.
+✅ Add **auto-refreshing dashboard** using sockets (optional).
+✅ Include **footer** with institute details, social links, and copyright.
+
+---
+
+Would you like me to generate a **complete folder structure + sample code (backend APIs + React components + email flow)** for this prompt next?
+That would give you a ready-to-run starter project.
