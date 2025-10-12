@@ -85,6 +85,7 @@ export const insertDLApplicationSchema = createInsertSchema(dlApplications).omit
 export const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
+  role: z.enum(["student", "faculty"]),
 });
 
 export const approvalSchema = z.object({

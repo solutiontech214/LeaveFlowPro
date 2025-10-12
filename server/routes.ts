@@ -11,7 +11,11 @@ import {
   approvalSchema,
 } from "@shared/schema";
 
-const JWT_SECRET = process.env.SESSION_SECRET || "your-secret-key-change-in-production";
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is required for JWT authentication");
+}
+
+const JWT_SECRET = process.env.SESSION_SECRET;
 
 // Email transporter setup
 const transporter = nodemailer.createTransport({
@@ -83,8 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Authentication routes
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
-      const { email, password } = loginSchema.parse(req.body);
-      const role = req.body.role as "student" | "faculty";
+      const { email, password, role } = loginSchema.parse(req.body);
 
       let user: any;
       let userData: any;
@@ -334,21 +337,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { applicationId, action, remarks } = approvalSchema.parse(req.body);
         const status = action === "approve" ? "approved" : "rejected";
 
+        // Get the application to check approval sequence
+        const application = await storage.getApplication(applicationId);
+        if (!application) {
+          return res.status(404).json({ error: "Application not found" });
+        }
+
         let updatedApp;
 
         if (user.facultyType === "CC") {
+          // CC can always approve/reject
           updatedApp = await storage.updateApplicationCCStatus(
             applicationId,
             status,
             remarks
           );
         } else if (user.facultyType === "HOD") {
+          // HOD can only approve if CC has approved and application requires HOD approval (≥2 days)
+          if (application.numberOfDays < 2) {
+            return res.status(403).json({ 
+              error: "This application does not require HOD approval" 
+            });
+          }
+          if (application.ccStatus !== "approved") {
+            return res.status(403).json({ 
+              error: "Cannot approve: CC approval is required first" 
+            });
+          }
           updatedApp = await storage.updateApplicationHODStatus(
             applicationId,
             status,
             remarks
           );
         } else if (user.facultyType === "VP") {
+          // VP can only approve if CC and HOD have approved and application requires VP approval (>2 days)
+          if (application.numberOfDays <= 2) {
+            return res.status(403).json({ 
+              error: "This application does not require VP approval" 
+            });
+          }
+          if (application.ccStatus !== "approved") {
+            return res.status(403).json({ 
+              error: "Cannot approve: CC approval is required first" 
+            });
+          }
+          if (application.hodStatus !== "approved") {
+            return res.status(403).json({ 
+              error: "Cannot approve: HOD approval is required first" 
+            });
+          }
           updatedApp = await storage.updateApplicationVPStatus(
             applicationId,
             status,
@@ -357,7 +394,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         if (!updatedApp) {
-          return res.status(404).json({ error: "Application not found" });
+          return res.status(500).json({ error: "Failed to update application" });
         }
 
         res.json(updatedApp);
