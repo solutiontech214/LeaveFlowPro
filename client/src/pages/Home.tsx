@@ -106,6 +106,9 @@ export default function Home() {
         userName={user.name}
         userRole={user.role}
         facultyType={user.facultyType}
+        rollNo={user.rollNo}
+        department={user.department}
+        division={user.division}
         onLogout={handleLogout}
       />
       <main className="container mx-auto px-4 py-8">
@@ -129,7 +132,7 @@ export default function Home() {
           </div>
         )}
         {user.role === "faculty" && (
-          <FacultyDashboard facultyType={user.facultyType!} />
+          <FacultyDashboard facultyType={user.facultyType!} department={user.department} />
         )}
       </main>
     </div>

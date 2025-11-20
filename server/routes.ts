@@ -10,7 +10,8 @@ import {
   insertDLApplicationSchema,
   approvalSchema,
 } from "@shared/schema";
-
+import dotenv from "dotenv";
+dotenv.config();
 if (!process.env.SESSION_SECRET) {
   throw new Error("SESSION_SECRET environment variable is required for JWT authentication");
 }
@@ -84,6 +85,28 @@ async function sendApprovalEmail(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  console.log("Registering routes...");
+
+  // DEBUG ENDPOINT - REMOVE LATER
+  app.get("/api/debug/users", async (_req, res) => {
+    console.log("Debug endpoint hit!");
+    try {
+      const student = await storage.getStudentByEmail("rahul@institute.edu");
+      const faculty = await storage.getFacultyByEmail("pradeep.cc@institute.edu");
+
+      console.log("Debug check:", { studentFound: !!student, facultyFound: !!faculty });
+
+      res.json({
+        studentFound: !!student,
+        studentDetails: student ? { id: student.id, email: student.email, passwordHash: student.password.substring(0, 10) + "..." } : null,
+        facultyFound: !!faculty,
+        facultyDetails: faculty ? { id: faculty.id, email: faculty.email } : null
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Authentication routes
   app.post("/api/auth/login", async (req: Request, res: Response) => {
     try {
@@ -355,13 +378,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (user.facultyType === "HOD") {
           // HOD can only approve if CC has approved and application requires HOD approval (≥2 days)
           if (application.numberOfDays < 2) {
-            return res.status(403).json({ 
-              error: "This application does not require HOD approval" 
+            return res.status(403).json({
+              error: "This application does not require HOD approval"
             });
           }
           if (application.ccStatus !== "approved") {
-            return res.status(403).json({ 
-              error: "Cannot approve: CC approval is required first" 
+            return res.status(403).json({
+              error: "Cannot approve: CC approval is required first"
             });
           }
           updatedApp = await storage.updateApplicationHODStatus(
@@ -372,18 +395,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else if (user.facultyType === "VP") {
           // VP can only approve if CC and HOD have approved and application requires VP approval (>2 days)
           if (application.numberOfDays <= 2) {
-            return res.status(403).json({ 
-              error: "This application does not require VP approval" 
+            return res.status(403).json({
+              error: "This application does not require VP approval"
             });
           }
           if (application.ccStatus !== "approved") {
-            return res.status(403).json({ 
-              error: "Cannot approve: CC approval is required first" 
+            return res.status(403).json({
+              error: "Cannot approve: CC approval is required first"
             });
           }
           if (application.hodStatus !== "approved") {
-            return res.status(403).json({ 
-              error: "Cannot approve: HOD approval is required first" 
+            return res.status(403).json({
+              error: "Cannot approve: HOD approval is required first"
             });
           }
           updatedApp = await storage.updateApplicationVPStatus(
@@ -403,6 +426,241 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // Attendance upload endpoint
+  app.post(
+    "/api/attendance/upload",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+        if (user.role !== "faculty") {
+          return res.status(403).json({ error: "Only faculty can upload attendance" });
+        }
+
+        const { attendanceData } = req.body;
+        if (!Array.isArray(attendanceData)) {
+          return res.status(400).json({ error: "Invalid data format" });
+        }
+
+        const results = {
+          successful: [] as string[],
+          failed: [] as { rollNo: string; reason: string }[],
+        };
+
+        for (const record of attendanceData) {
+          const { rollNo, attendancePercentage } = record;
+
+          if (!rollNo || attendancePercentage === undefined) {
+            results.failed.push({
+              rollNo: rollNo || "unknown",
+              reason: "Missing rollNo or attendancePercentage",
+            });
+            continue;
+          }
+
+          // Validate percentage range
+          const percentage = parseFloat(attendancePercentage);
+          if (isNaN(percentage) || percentage < 0 || percentage > 100) {
+            results.failed.push({
+              rollNo,
+              reason: "Invalid attendance percentage (must be 0-100)",
+            });
+            continue;
+          }
+
+          // Get student to check department
+          const student = await storage.getStudentByRollNo(rollNo);
+          if (!student) {
+            results.failed.push({
+              rollNo,
+              reason: "Student not found",
+            });
+            continue;
+          }
+
+          // Check department access for CC and HOD
+          if (user.facultyType === "CC" || user.facultyType === "HOD") {
+            if (student.department !== user.department) {
+              results.failed.push({
+                rollNo,
+                reason: "Access denied: Student not in your department",
+              });
+              continue;
+            }
+          }
+
+          // Update attendance
+          const updated = await storage.updateStudentAttendance(rollNo, percentage);
+          if (updated) {
+            results.successful.push(rollNo);
+          } else {
+            results.failed.push({
+              rollNo,
+              reason: "Failed to update",
+            });
+          }
+        }
+
+        res.json({
+          message: "Attendance upload completed",
+          successCount: results.successful.length,
+          failureCount: results.failed.length,
+          successful: results.successful,
+          failed: results.failed,
+        });
+      } catch (error: any) {
+        res.status(400).json({ error: error.message || "Failed to upload attendance" });
+      }
+    }
+  );
+
+
+  // Bulk student import endpoint
+  app.post(
+    "/api/students/bulk-import",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+
+        // Only faculty can import students
+        if (user.role !== "faculty") {
+          return res.status(403).json({
+            error: "Only faculty members can import students"
+          });
+        }
+
+        const { students } = req.body;
+        if (!Array.isArray(students)) {
+          return res.status(400).json({ error: "Invalid data format" });
+        }
+
+        const results = {
+          successful: [] as string[],
+          failed: [] as { rollNo: string; reason: string }[],
+        };
+
+        for (const studentData of students) {
+          const { name, email, password, department, division, rollNo, attendancePercentage } = studentData;
+
+          // Validate required fields
+          if (!name || !email || !password || !department || !division || !rollNo) {
+            results.failed.push({
+              rollNo: rollNo || "unknown",
+              reason: "Missing required fields (name, email, password, department, division, rollNo)",
+            });
+            continue;
+          }
+
+          // Department validation for CC and HOD
+          if (user.facultyType === "CC" || user.facultyType === "HOD") {
+            if (department !== user.department) {
+              results.failed.push({
+                rollNo,
+                reason: `Access denied: You can only import students for ${user.department} department`,
+              });
+              continue;
+            }
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(email)) {
+            results.failed.push({
+              rollNo,
+              reason: "Invalid email format",
+            });
+            continue;
+          }
+
+          // Check for duplicate email
+          const existingByEmail = await storage.getStudentByEmail(email);
+          if (existingByEmail) {
+            results.failed.push({
+              rollNo,
+              reason: "Email already exists",
+            });
+            continue;
+          }
+
+          // Check for duplicate rollNo
+          const existingByRollNo = await storage.getStudentByRollNo(rollNo);
+          if (existingByRollNo) {
+            results.failed.push({
+              rollNo,
+              reason: "Roll number already exists",
+            });
+            continue;
+          }
+
+          // Validate attendance percentage
+          const attendance = attendancePercentage !== undefined
+            ? parseFloat(attendancePercentage)
+            : 0;
+          if (isNaN(attendance) || attendance < 0 || attendance > 100) {
+            results.failed.push({
+              rollNo,
+              reason: "Invalid attendance percentage (must be 0-100)",
+            });
+            continue;
+          }
+
+          try {
+            // Hash password
+            const hashedPassword = await bcrypt.hash(password, 10);
+
+            // Create student
+            await storage.createStudent({
+              name,
+              email,
+              password: hashedPassword,
+              department,
+              division,
+              rollNo,
+              attendancePercentage: Math.round(attendance),
+            });
+
+            results.successful.push(rollNo);
+          } catch (error: any) {
+            results.failed.push({
+              rollNo,
+              reason: error.message || "Failed to create student",
+            });
+          }
+        }
+
+        res.json({
+          message: "Student import completed",
+          successCount: results.successful.length,
+          failureCount: results.failed.length,
+          successful: results.successful,
+          failed: results.failed,
+        });
+      } catch (error: any) {
+        res.status(400).json({
+          error: error.message || "Failed to import students"
+        });
+      }
+    }
+  );
+
+  // DEBUG ENDPOINT - REMOVE LATER
+  app.get("/api/debug/users", async (_req, res) => {
+    try {
+      const student = await storage.getStudentByEmail("rahul@institute.edu");
+      const faculty = await storage.getFacultyByEmail("pradeep.cc@institute.edu");
+
+      res.json({
+        studentFound: !!student,
+        studentDetails: student ? { id: student.id, email: student.email, passwordHash: student.password.substring(0, 10) + "..." } : null,
+        facultyFound: !!faculty,
+        facultyDetails: faculty ? { id: faculty.id, email: faculty.email } : null
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

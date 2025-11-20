@@ -14,13 +14,15 @@ export interface IStorage {
   getStudentByEmail(email: string): Promise<Student | undefined>;
   getStudentByRollNo(rollNo: string): Promise<Student | undefined>;
   createStudent(student: InsertStudent): Promise<Student>;
-  
+  updateStudent(id: string, student: Partial<Student>): Promise<Student | undefined>;
+  updateStudentAttendance(rollNo: string, attendancePercentage: number): Promise<Student | undefined>;
+
   // Faculty operations
   getFaculty(id: string): Promise<Faculty | undefined>;
   getFacultyByEmail(email: string): Promise<Faculty | undefined>;
   getFacultyByRole(role: string, department?: string): Promise<Faculty | undefined>;
   createFaculty(faculty: InsertFaculty): Promise<Faculty>;
-  
+
   // DL Application operations
   getApplication(id: string): Promise<DLApplication | undefined>;
   getApplicationsByStudent(studentId: string): Promise<DLApplication[]>;
@@ -80,6 +82,30 @@ export class MemStorage implements IStorage {
     };
     this.students.set(id, student);
     return student;
+  }
+
+  async updateStudent(id: string, updates: Partial<Student>): Promise<Student | undefined> {
+    const student = this.students.get(id);
+    if (!student) return undefined;
+
+    const updated: Student = { ...student, ...updates };
+    this.students.set(id, updated);
+    return updated;
+  }
+
+  async updateStudentAttendance(
+    rollNo: string,
+    attendancePercentage: number
+  ): Promise<Student | undefined> {
+    const student = await this.getStudentByRollNo(rollNo);
+    if (!student) return undefined;
+
+    const updated: Student = {
+      ...student,
+      attendancePercentage,
+    };
+    this.students.set(student.id, updated);
+    return updated;
   }
 
   // Faculty operations
@@ -204,8 +230,8 @@ export class MemStorage implements IStorage {
         status === "rejected"
           ? "rejected"
           : app.numberOfDays === 1
-          ? "approved"
-          : "pending",
+            ? "approved"
+            : "pending",
     };
     this.applications.set(id, updated);
     return updated;
@@ -228,8 +254,8 @@ export class MemStorage implements IStorage {
         status === "rejected"
           ? "rejected"
           : app.numberOfDays === 2
-          ? "approved"
-          : "pending",
+            ? "approved"
+            : "pending",
     };
     this.applications.set(id, updated);
     return updated;

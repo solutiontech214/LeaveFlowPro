@@ -54,7 +54,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleStudentLogin} className="space-y-4">
+                <form onSubmit={handleStudentLogin} className="space-y-4" autoComplete="off">
                   <div className="space-y-2">
                     <Label htmlFor="student-email">Email</Label>
                     <Input
@@ -65,6 +65,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       onChange={(e) => setStudentEmail(e.target.value)}
                       required
                       data-testid="input-student-email"
+                      autoComplete="off"
                     />
                   </div>
                   <div className="space-y-2">
@@ -76,6 +77,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       onChange={(e) => setStudentPassword(e.target.value)}
                       required
                       data-testid="input-student-password"
+                      autoComplete="new-password"
                     />
                   </div>
                   <Button type="submit" className="w-full" data-testid="button-student-login">
@@ -95,7 +97,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleFacultyLogin} className="space-y-4">
+                <form onSubmit={handleFacultyLogin} className="space-y-4" autoComplete="off">
                   <div className="space-y-2">
                     <Label htmlFor="faculty-email">Email</Label>
                     <Input
@@ -106,6 +108,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       onChange={(e) => setFacultyEmail(e.target.value)}
                       required
                       data-testid="input-faculty-email"
+                      autoComplete="off"
                     />
                   </div>
                   <div className="space-y-2">
@@ -117,6 +120,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
                       onChange={(e) => setFacultyPassword(e.target.value)}
                       required
                       data-testid="input-faculty-password"
+                      autoComplete="new-password"
                     />
                   </div>
                   <Button type="submit" className="w-full" data-testid="button-faculty-login">

@@ -90,3 +90,51 @@ export async function approveOrRejectApplication(
 
   return response.json();
 }
+
+export async function uploadAttendance(
+  attendanceData: { rollNo: string; attendancePercentage: number }[]
+) {
+  const response = await fetch("/api/attendance/upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ attendanceData }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to upload attendance");
+  }
+
+  return response.json();
+}
+
+export async function importStudents(
+  students: {
+    name: string;
+    email: string;
+    password: string;
+    department: string;
+    division: string;
+    rollNo: string;
+    attendancePercentage: number;
+  }[]
+) {
+  const response = await fetch("/api/students/bulk-import", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ students }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to import students");
+  }
+
+  return response.json();
+}

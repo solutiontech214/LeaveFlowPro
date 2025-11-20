@@ -1,0 +1,70 @@
+name,email,password,department,division,rollNo,attendancePercentage
+Aarav Sharma,aarav.sharma@institute.edu,Student@123,Computer Science,A,CS21B001,85
+Vivaan Patel,vivaan.patel@institute.edu,Student@123,Computer Science,A,CS21B002,92
+Aditya Kumar,aditya.kumar@institute.edu,Student@123,Computer Science,A,CS21B003,78
+Vihaan Singh,vihaan.singh@institute.edu,Student@123,Computer Science,A,CS21B004,88
+Arjun Reddy,arjun.reddy@institute.edu,Student@123,Computer Science,A,CS21B005,95
+Sai Mehta,sai.mehta@institute.edu,Student@123,Computer Science,B,CS21B006,72
+Reyansh Gupta,reyansh.gupta@institute.edu,Student@123,Computer Science,B,CS21B007,89
+Ayaan Desai,ayaan.desai@institute.edu,Student@123,Computer Science,B,CS21B008,91
+Krishna Verma,krishna.verma@institute.edu,Student@123,Computer Science,B,CS21B009,84
+Ishaan Joshi,ishaan.joshi@institute.edu,Student@123,Computer Science,B,CS21B010,77
+Advait Rao,advait.rao@institute.edu,Student@123,Computer Science,C,CS21B011,93
+Pranav Nair,pranav.nair@institute.edu,Student@123,Computer Science,C,CS21B012,86
+Dhruv Shah,dhruv.shah@institute.edu,Student@123,Computer Science,C,CS21B013,90
+Kabir Iyer,kabir.iyer@institute.edu,Student@123,Computer Science,C,CS21B014,82
+Ananya Agarwal,ananya.agarwal@institute.edu,Student@123,Electronics,A,EC21B001,88
+Diya Kulkarni,diya.kulkarni@institute.edu,Student@123,Electronics,A,EC21B002,94
+Isha Malhotra,isha.malhotra@institute.edu,Student@123,Electronics,A,EC21B003,76
+Saanvi Bhat,saanvi.bhat@institute.edu,Student@123,Electronics,A,EC21B004,87
+Aanya Bansal,aanya.bansal@institute.edu,Student@123,Electronics,A,EC21B005,91
+Pari Choudhary,pari.choudhary@institute.edu,Student@123,Electronics,B,EC21B006,83
+Myra Saxena,myra.saxena@institute.edu,Student@123,Electronics,B,EC21B007,89
+Kiara Pillai,kiara.pillai@institute.edu,Student@123,Electronics,B,EC21B008,92
+Navya Hegde,navya.hegde@institute.edu,Student@123,Electronics,B,EC21B009,79
+Sara Menon,sara.menon@institute.edu,Student@123,Electronics,B,EC21B010,85
+Riya Shetty,riya.shetty@institute.edu,Student@123,Electronics,C,EC21B011,90
+Aditi Kapoor,aditi.kapoor@institute.edu,Student@123,Electronics,C,EC21B012,88
+Avni Pandey,avni.pandey@institute.edu,Student@123,Electronics,C,EC21B013,93
+Mira Jain,mira.jain@institute.edu,Student@123,Electronics,C,EC21B014,81
+Rohan Bhatt,rohan.bhatt@institute.edu,Student@123,Mechanical,A,ME21B001,86
+Arnav Mishra,arnav.mishra@institute.edu,Student@123,Mechanical,A,ME21B002,92
+Atharva Yadav,atharva.yadav@institute.edu,Student@123,Mechanical,A,ME21B003,78
+Shaurya Tiwari,shaurya.tiwari@institute.edu,Student@123,Mechanical,A,ME21B004,89
+Rudra Chauhan,rudra.chauhan@institute.edu,Student@123,Mechanical,A,ME21B005,94
+Aryan Dubey,aryan.dubey@institute.edu,Student@123,Mechanical,B,ME21B006,75
+Om Bhardwaj,om.bhardwaj@institute.edu,Student@123,Mechanical,B,ME21B007,87
+Shivansh Khanna,shivansh.khanna@institute.edu,Student@123,Mechanical,B,ME21B008,90
+Veer Rawal,veer.rawal@institute.edu,Student@123,Mechanical,B,ME21B009,83
+Yug Chopra,yug.chopra@institute.edu,Student@123,Mechanical,B,ME21B010,88
+Prisha Sinha,prisha.sinha@institute.edu,Student@123,Mechanical,C,ME21B011,91
+Anvi Thakur,anvi.thakur@institute.edu,Student@123,Mechanical,C,ME21B012,85
+Aadhya Ghosh,aadhya.ghosh@institute.edu,Student@123,Mechanical,C,ME21B013,92
+Shanaya Seth,shanaya.seth@institute.edu,Student@123,Mechanical,C,ME21B014,79
+Kavya Dutta,kavya.dutta@institute.edu,Student@123,Civil,A,CE21B001,87
+Aaradhya Bakshi,aaradhya.bakshi@institute.edu,Student@123,Civil,A,CE21B002,93
+Nitya Kohli,nitya.kohli@institute.edu,Student@123,Civil,A,CE21B003,80
+Ahana Rathi,ahana.rathi@institute.edu,Student@123,Civil,A,CE21B004,89
+Vanya Sethi,vanya.sethi@institute.edu,Student@123,Civil,A,CE21B005,95
+Kashvi Bose,kashvi.bose@institute.edu,Student@123,Civil,B,CE21B006,74
+Miraya Dalal,miraya.dalal@institute.edu,Student@123,Civil,B,CE21B007,88
+Larisa Arora,larisa.arora@institute.edu,Student@123,Civil,B,CE21B008,91
+Pihu Ranganathan,pihu.ranganathan@institute.edu,Student@123,Civil,B,CE21B009,84
+Anika Varma,anika.varma@institute.edu,Student@123,Civil,B,CE21B010,86
+Ansh Khare,ansh.khare@institute.edu,Student@123,Information Technology,A,IT21B001,92
+Moksh Mathur,moksh.mathur@institute.edu,Student@123,Information Technology,A,IT21B002,88
+Tanish Chatterjee,tanish.chatterjee@institute.edu,Student@123,Information Technology,A,IT21B003,94
+Rishabh Tripathi,rishabh.tripathi@institute.edu,Student@123,Information Technology,A,IT21B004,77
+Shaan Rawat,shaan.rawat@institute.edu,Student@123,Information Technology,A,IT21B005,90
+Zara Khurana,zara.khurana@institute.edu,Student@123,Information Technology,B,IT21B006,85
+Mysha Bajaj,mysha.bajaj@institute.edu,Student@123,Information Technology,B,IT21B007,89
+Aisha Vohra,aisha.vohra@institute.edu,Student@123,Information Technology,B,IT21B008,93
+Shanvi Gill,shanvi.gill@institute.edu,Student@123,Information Technology,B,IT21B009,81
+Tvisha Bedi,tvisha.bedi@institute.edu,Student@123,Information Technology,B,IT21B010,87
+Advika Sachdev,advika.sachdev@institute.edu,Student@123,Information Technology,C,IT21B011,91
+Tarini Mittal,tarini.mittal@institute.edu,Student@123,Information Technology,C,IT21B012,86
+Lavanya Kaul,lavanya.kaul@institute.edu,Student@123,Information Technology,C,IT21B013,92
+Chaitanya Sodhi,chaitanya.sodhi@institute.edu,Student@123,Information Technology,C,IT21B014,78
+Divyansh Balakrishnan,divyansh.balakrishnan@institute.edu,Student@123,Information Technology,C,IT21B015,99
+Rohan IT,rohan.it@institute.edu,Student@123,IT,A,IT21B001,85
+Sanya IT,sanya.it@institute.edu,Student@123,IT,A,IT21B002,90

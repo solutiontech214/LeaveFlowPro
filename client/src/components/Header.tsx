@@ -15,10 +15,13 @@ interface HeaderProps {
   userName: string;
   userRole: "student" | "faculty";
   facultyType?: "CC" | "HOD" | "VP";
+  rollNo?: string;
+  department?: string;
+  division?: string;
   onLogout?: () => void;
 }
 
-export function Header({ userName, userRole, facultyType, onLogout }: HeaderProps) {
+export function Header({ userName, userRole, facultyType, rollNo, department, division, onLogout }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between gap-4 px-4">
@@ -43,11 +46,30 @@ export function Header({ userName, userRole, facultyType, onLogout }: HeaderProp
                 <div className="hidden text-left sm:block">
                   <p className="text-sm font-medium">{userName}</p>
                   <div className="flex items-center gap-1">
-                    <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
-                    {facultyType && (
-                      <Badge variant="secondary" className="text-xs px-1 py-0">
-                        {facultyType}
-                      </Badge>
+                    {userRole === "student" && rollNo && (
+                      <p className="text-xs text-muted-foreground">{rollNo}</p>
+                    )}
+                    {userRole === "student" && department && (
+                      <>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <p className="text-xs text-muted-foreground">{department}</p>
+                      </>
+                    )}
+                    {userRole === "student" && division && (
+                      <>
+                        <span className="text-xs text-muted-foreground">•</span>
+                        <p className="text-xs text-muted-foreground">Div {division}</p>
+                      </>
+                    )}
+                    {userRole === "faculty" && (
+                      <>
+                        <p className="text-xs text-muted-foreground capitalize">{userRole}</p>
+                        {facultyType && (
+                          <Badge variant="secondary" className="text-xs px-1 py-0">
+                            {facultyType}
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

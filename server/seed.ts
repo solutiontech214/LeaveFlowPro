@@ -102,6 +102,51 @@ export async function seedDatabase() {
         role: "HOD",
         department: "Electronics",
       },
+      // IT Department Faculty
+      {
+        name: "Dr. Pradeep Verma",
+        email: "pradeep.cc@institute.edu",
+        password: await bcrypt.hash("faculty123", 10),
+        role: "CC",
+        department: "IT",
+      },
+      {
+        name: "Prof. Neha Sharma",
+        email: "neha.hod@institute.edu",
+        password: await bcrypt.hash("faculty123", 10),
+        role: "HOD",
+        department: "IT",
+      },
+      // CIVIL Department Faculty
+      {
+        name: "Dr. Ramesh Patil",
+        email: "ramesh.cc@institute.edu",
+        password: await bcrypt.hash("faculty123", 10),
+        role: "CC",
+        department: "CIVIL",
+      },
+      {
+        name: "Prof. Kavita Nair",
+        email: "kavita.hod@institute.edu",
+        password: await bcrypt.hash("faculty123", 10),
+        role: "HOD",
+        department: "CIVIL",
+      },
+      // Mechanical Department Faculty
+      {
+        name: "Dr. Suresh Rao",
+        email: "suresh.cc@institute.edu",
+        password: await bcrypt.hash("faculty123", 10),
+        role: "CC",
+        department: "Mechanical",
+      },
+      {
+        name: "Prof. Meera Gupta",
+        email: "meera.hod@institute.edu",
+        password: await bcrypt.hash("faculty123", 10),
+        role: "HOD",
+        department: "Mechanical",
+      },
     ];
 
     for (const faculty of facultyMembers) {
@@ -118,7 +163,57 @@ export async function seedDatabase() {
     console.log("\nFaculty (password: faculty123):");
     console.log("- anjali.cc@institute.edu (CC - Computer Science)");
     console.log("- rajesh.hod@institute.edu (HOD - Computer Science)");
+    console.log("- kiran.cc@institute.edu (CC - Electronics)");
+    console.log("- anil.hod@institute.edu (HOD - Electronics)");
+    console.log("- pradeep.cc@institute.edu (CC - IT)");
+    console.log("- neha.hod@institute.edu (HOD - IT)");
+    console.log("- ramesh.cc@institute.edu (CC - CIVIL)");
+    console.log("- kavita.hod@institute.edu (HOD - CIVIL)");
+    console.log("- suresh.cc@institute.edu (CC - Mechanical)");
+    console.log("- meera.hod@institute.edu (HOD - Mechanical)");
     console.log("- sunita.vp@institute.edu (Vice Principal)");
+
+    // Import students from CSV if exists
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const csvPath = path.join(process.cwd(), "70_students_import.csv");
+
+      if (fs.existsSync(csvPath)) {
+        console.log("\nFound 70_students_import.csv, importing...");
+        const csvContent = fs.readFileSync(csvPath, "utf-8");
+        const lines = csvContent.split("\n");
+        let importedCount = 0;
+
+        // Skip header
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          const [name, email, password, department, division, rollNo, attendancePercentage] = line.split(",");
+
+          if (email && password) {
+            // Check if student already exists to avoid duplicates with hardcoded seed
+            const existing = await storage.getStudentByEmail(email);
+            if (!existing) {
+              await storage.createStudent({
+                name,
+                email,
+                password: await bcrypt.hash(password, 10),
+                department,
+                division,
+                rollNo,
+                attendancePercentage: parseFloat(attendancePercentage) || 0,
+              });
+              importedCount++;
+            }
+          }
+        }
+        console.log(`Successfully imported ${importedCount} students from CSV.`);
+      }
+    } catch (err) {
+      console.error("Error importing CSV:", err);
+    }
   } catch (error) {
     console.error("Error seeding database:", error);
   }

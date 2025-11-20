@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { ApplicationCard } from "./ApplicationCard";
+import { AttendanceUpload } from "./AttendanceUpload";
+import { StudentImport } from "./StudentImport";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,9 +36,10 @@ interface Application {
 
 interface FacultyDashboardProps {
   facultyType: "CC" | "HOD" | "VP";
+  department?: string;
 }
 
-export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
+export function FacultyDashboard({ facultyType, department }: FacultyDashboardProps) {
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
   const [action, setAction] = useState<"approve" | "reject" | null>(null);
@@ -82,10 +85,10 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
           title: action === "approve" ? "Application Approved" : "Application Rejected",
           description: `The application has been ${action}d successfully.`,
         });
-        
+
         // Reload applications
         await loadApplications();
-        
+
         setSelectedApp(null);
         setAction(null);
         setRemarks("");
@@ -136,6 +139,11 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
             <Badge variant="secondary" className="text-sm">
               {facultyLabels[facultyType]}
             </Badge>
+            {department && facultyType !== "VP" && (
+              <Badge variant="outline" className="text-sm">
+                {department}
+              </Badge>
+            )}
           </div>
           <p className="text-muted-foreground">Review and manage duty leave applications</p>
         </div>
@@ -154,6 +162,8 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
           </TabsTrigger>
           <TabsTrigger value="approved" data-testid="tab-faculty-approved">Approved</TabsTrigger>
           <TabsTrigger value="rejected" data-testid="tab-faculty-rejected">Rejected</TabsTrigger>
+          <TabsTrigger value="attendance" data-testid="tab-faculty-attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="import" data-testid="tab-faculty-import">Import Students</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-6 space-y-4">
@@ -191,6 +201,14 @@ export function FacultyDashboard({ facultyType }: FacultyDashboardProps) {
             .map((app) => (
               <ApplicationCard key={app.id} application={mapApplication(app)} />
             ))}
+        </TabsContent>
+
+        <TabsContent value="attendance" className="mt-6">
+          <AttendanceUpload />
+        </TabsContent>
+
+        <TabsContent value="import" className="mt-6">
+          <StudentImport />
         </TabsContent>
       </Tabs>
 
