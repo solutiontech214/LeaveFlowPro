@@ -72,21 +72,31 @@ export function ApplicationCard({
         </div>
       </CardContent>
       {showActions && application.status === "pending" && (
-        <CardFooter className="flex gap-2 pt-4">
+        <CardFooter className="flex flex-col gap-2 pt-4">
+          <div className="flex w-full gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onReject?.(application.id)}
+              data-testid={`button-reject-${application.id}`}
+            >
+              Reject
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={() => onApprove?.(application.id)}
+              data-testid={`button-approve-${application.id}`}
+            >
+              Approve
+            </Button>
+          </div>
           <Button
-            variant="outline"
-            className="flex-1"
-            onClick={() => onReject?.(application.id)}
-            data-testid={`button-reject-${application.id}`}
+            variant="ghost"
+            className="w-full h-8 text-muted-foreground"
+            onClick={() => onView?.(application.id)}
+            data-testid={`button-view-${application.id}`}
           >
-            Reject
-          </Button>
-          <Button
-            className="flex-1"
-            onClick={() => onApprove?.(application.id)}
-            data-testid={`button-approve-${application.id}`}
-          >
-            Approve
+            View Details
           </Button>
         </CardFooter>
       )}
@@ -105,3 +115,4 @@ export function ApplicationCard({
     </Card>
   );
 }
+

@@ -653,12 +653,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const user = (req as any).user;
 
-        // Only faculty can view all students
-        if (user.role !== "faculty") {
-          return res.status(403).json({
-            error: "Only faculty members can view all students"
-          });
-        }
+        // Allow both faculty and students to view all students
+        // if (user.role !== "faculty") {
+        //   return res.status(403).json({
+        //     error: "Only faculty members can view all students"
+        //   });
+        // }
 
         const students = await storage.getAllStudents();
 

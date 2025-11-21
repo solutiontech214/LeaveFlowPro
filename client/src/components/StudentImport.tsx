@@ -59,6 +59,8 @@ Priya Patel,priya.patel@institute.edu,Student@123,Electronics,B,EC21B201,90`;
         return students;
     };
 
+    const [lastUploadedStudents, setLastUploadedStudents] = useState<any[]>([]);
+
     const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -74,6 +76,7 @@ Priya Patel,priya.patel@institute.edu,Student@123,Electronics,B,EC21B201,90`;
 
         setUploading(true);
         setResult(null);
+        setLastUploadedStudents([]);
 
         try {
             const text = await file.text();
@@ -91,6 +94,11 @@ Priya Patel,priya.patel@institute.edu,Student@123,Electronics,B,EC21B201,90`;
 
             const uploadResult = await importStudents(students);
             setResult(uploadResult);
+
+            // Calculate successful students
+            const failedRollNos = new Set(uploadResult.failed.map((f: any) => f.rollNo));
+            const successful = students.filter((s) => !failedRollNos.has(s.rollNo));
+            setLastUploadedStudents(successful);
 
             if (uploadResult.successCount > 0) {
                 toast({
@@ -202,6 +210,30 @@ Priya Patel,priya.patel@institute.edu,Student@123,Electronics,B,EC21B201,90`;
                                 </div>
                             </div>
                         </div>
+
+                        {lastUploadedStudents.length > 0 && (
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-sm">Successfully Uploaded Students:</h4>
+                                <div className="max-h-64 overflow-y-auto rounded-lg border">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-muted">
+                                            <tr>
+                                                <th className="p-2 text-left">Name</th>
+                                                <th className="p-2 text-left">Roll No</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {lastUploadedStudents.map((student, index) => (
+                                                <tr key={index} className="border-t">
+                                                    <td className="p-2">{student.name}</td>
+                                                    <td className="p-2">{student.rollNo}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
 
                         {result.failed.length > 0 && (
                             <div className="space-y-2">

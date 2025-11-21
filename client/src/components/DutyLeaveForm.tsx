@@ -1,11 +1,27 @@
-import { useState } from "react";
-import { Plus, X, Calendar, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, X, Calendar, AlertCircle, Check, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { getAllStudents } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface AdditionalStudent {
   id: string;
@@ -35,8 +51,32 @@ export function DutyLeaveForm({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [additionalStudents, setAdditionalStudents] = useState<AdditionalStudent[]>([]);
+  const [availableStudents, setAvailableStudents] = useState<any[]>([]);
+  const [openComboboxes, setOpenComboboxes] = useState<{ [key: string]: boolean }>({});
+  const { toast } = useToast();
 
   const isEligible = attendancePercentage >= 75;
+
+  useEffect(() => {
+    loadStudents();
+  }, []);
+
+  const loadStudents = async () => {
+    try {
+      const data = await getAllStudents();
+      // Filter out current student and already added students, AND students with < 75% attendance
+      setAvailableStudents(data.filter((s: any) =>
+        s.rollNo !== studentRollNo && s.attendancePercentage >= 75
+      ));
+    } catch (error) {
+      console.error("Failed to load students", error);
+      toast({
+        title: "Error",
+        description: "Failed to load student list",
+        variant: "destructive",
+      });
+    }
+  };
 
   const addStudent = () => {
     setAdditionalStudents([
@@ -49,12 +89,22 @@ export function DutyLeaveForm({
     setAdditionalStudents(additionalStudents.filter((s) => s.id !== id));
   };
 
-  const updateStudent = (id: string, field: "name" | "rollNo", value: string) => {
-    setAdditionalStudents(
-      additionalStudents.map((s) =>
-        s.id === id ? { ...s, [field]: value } : s
-      )
-    );
+  const updateStudent = (id: string, rollNo: string) => {
+    const selectedStudent = availableStudents.find((s) => s.rollNo === rollNo);
+    if (selectedStudent) {
+      setAdditionalStudents(
+        additionalStudents.map((s) =>
+          s.id === id
+            ? { ...s, name: selectedStudent.name, rollNo: selectedStudent.rollNo }
+            : s
+        )
+      );
+      setOpenComboboxes((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const toggleCombobox = (id: string, isOpen: boolean) => {
+    setOpenComboboxes((prev) => ({ ...prev, [id]: isOpen }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -176,20 +226,59 @@ export function DutyLeaveForm({
 
             {additionalStudents.map((student, index) => (
               <div key={student.id} className="flex gap-2" data-testid={`additional-student-${index}`}>
-                <Input
-                  placeholder="Student Name"
-                  value={student.name}
-                  onChange={(e) => updateStudent(student.id, "name", e.target.value)}
-                  className="flex-1"
-                  data-testid={`input-additional-name-${index}`}
-                />
-                <Input
-                  placeholder="Roll No"
-                  value={student.rollNo}
-                  onChange={(e) => updateStudent(student.id, "rollNo", e.target.value)}
-                  className="flex-1"
-                  data-testid={`input-additional-roll-${index}`}
-                />
+                <div className="flex-1">
+                  <Popover
+                    open={openComboboxes[student.id] || false}
+                    onOpenChange={(open) => toggleCombobox(student.id, open)}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openComboboxes[student.id] || false}
+                        className="w-full justify-between"
+                        data-testid={`select-student-${index}`}
+                      >
+                        {student.rollNo
+                          ? availableStudents.find((s) => s.rollNo === student.rollNo)?.name + ` (${student.rollNo})`
+                          : "Select Student..."}
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[200px] p-0">
+                      <Command>
+                        <CommandInput placeholder="Search student..." />
+                        <CommandList>
+                          <CommandEmpty>No student found.</CommandEmpty>
+                          <CommandGroup>
+                            {availableStudents
+                              .filter(
+                                (s) =>
+                                  !additionalStudents.some(
+                                    (added) => added.rollNo === s.rollNo && added.id !== student.id
+                                  )
+                              )
+                              .map((s) => (
+                                <CommandItem
+                                  key={s.id}
+                                  value={`${s.name} ${s.rollNo}`}
+                                  onSelect={() => updateStudent(student.id, s.rollNo)}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      student.rollNo === s.rollNo ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  {s.name} ({s.rollNo})
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
                 <Button
                   type="button"
                   variant="ghost"

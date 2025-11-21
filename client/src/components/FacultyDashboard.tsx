@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { CheckCircle, XCircle, Clock } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { ApplicationCard } from "./ApplicationCard";
-import { AttendanceUpload } from "./AttendanceUpload";
+
 import { StudentImport } from "./StudentImport";
 import { StudentList } from "./StudentList";
+import { ApplicationDetailsDialog } from "./ApplicationDetailsDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -26,6 +27,7 @@ interface Application {
   studentName: string;
   rollNo: string;
   department: string;
+  division: string;
   numberOfDays: number;
   reason: string;
   dateFrom: string;
@@ -33,6 +35,17 @@ interface Application {
   overallStatus: string;
   createdAt: string;
   additionalStudents?: string[] | null;
+
+  // Approval tracking
+  ccStatus: string;
+  ccDate: string | null;
+  ccRemarks: string | null;
+  hodStatus: string;
+  hodDate: string | null;
+  hodRemarks: string | null;
+  vpStatus: string;
+  vpDate: string | null;
+  vpRemarks: string | null;
 }
 
 interface FacultyDashboardProps {
@@ -43,6 +56,7 @@ interface FacultyDashboardProps {
 export function FacultyDashboard({ facultyType, department }: FacultyDashboardProps) {
   const [applications, setApplications] = useState<Application[]>([]);
   const [selectedApp, setSelectedApp] = useState<string | null>(null);
+  const [viewApp, setViewApp] = useState<Application | null>(null);
   const [action, setAction] = useState<"approve" | "reject" | null>(null);
   const [remarks, setRemarks] = useState("");
   const [loading, setLoading] = useState(true);
@@ -76,6 +90,13 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
   const handleAction = (id: string, type: "approve" | "reject") => {
     setSelectedApp(id);
     setAction(type);
+  };
+
+  const handleView = (id: string) => {
+    const app = applications.find((a) => a.id === id);
+    if (app) {
+      setViewApp(app);
+    }
   };
 
   const confirmAction = async () => {
@@ -163,7 +184,7 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
           </TabsTrigger>
           <TabsTrigger value="approved" data-testid="tab-faculty-approved">Approved</TabsTrigger>
           <TabsTrigger value="rejected" data-testid="tab-faculty-rejected">Rejected</TabsTrigger>
-          <TabsTrigger value="attendance" data-testid="tab-faculty-attendance">Attendance</TabsTrigger>
+
           <TabsTrigger value="import" data-testid="tab-faculty-import">Import Students</TabsTrigger>
           <TabsTrigger value="students" data-testid="tab-faculty-students">Students</TabsTrigger>
         </TabsList>
@@ -184,6 +205,7 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
                   showActions
                   onApprove={(id) => handleAction(id, "approve")}
                   onReject={(id) => handleAction(id, "reject")}
+                  onView={handleView}
                 />
               ))
           )}
@@ -193,7 +215,11 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
           {applications
             .filter((a) => a.overallStatus === "approved")
             .map((app) => (
-              <ApplicationCard key={app.id} application={mapApplication(app)} />
+              <ApplicationCard
+                key={app.id}
+                application={mapApplication(app)}
+                onView={handleView}
+              />
             ))}
         </TabsContent>
 
@@ -201,13 +227,15 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
           {applications
             .filter((a) => a.overallStatus === "rejected")
             .map((app) => (
-              <ApplicationCard key={app.id} application={mapApplication(app)} />
+              <ApplicationCard
+                key={app.id}
+                application={mapApplication(app)}
+                onView={handleView}
+              />
             ))}
         </TabsContent>
 
-        <TabsContent value="attendance" className="mt-6">
-          <AttendanceUpload />
-        </TabsContent>
+
 
         <TabsContent value="import" className="mt-6">
           <StudentImport />
@@ -263,6 +291,12 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ApplicationDetailsDialog
+        application={viewApp}
+        open={!!viewApp}
+        onOpenChange={(open) => !open && setViewApp(null)}
+      />
     </div>
   );
 }

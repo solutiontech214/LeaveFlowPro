@@ -49,9 +49,10 @@ export function StudentList() {
     };
 
     const filteredStudents = students.filter((student) =>
-        student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase())
+        (student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            student.email.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        student.attendancePercentage >= 75
     );
 
     if (loading) {
@@ -116,8 +117,8 @@ export function StudentList() {
                                         <TableCell className="text-right">
                                             <span
                                                 className={`font-bold ${student.attendancePercentage < 75
-                                                        ? "text-red-500"
-                                                        : "text-green-500"
+                                                    ? "text-red-500"
+                                                    : "text-green-500"
                                                     }`}
                                             >
                                                 {student.attendancePercentage}%
