@@ -13,6 +13,7 @@ export interface IStorage {
   getStudent(id: string): Promise<Student | undefined>;
   getStudentByEmail(email: string): Promise<Student | undefined>;
   getStudentByRollNo(rollNo: string): Promise<Student | undefined>;
+  getAllStudents(): Promise<Student[]>;
   createStudent(student: InsertStudent): Promise<Student>;
   updateStudent(id: string, student: Partial<Student>): Promise<Student | undefined>;
   updateStudentAttendance(rollNo: string, attendancePercentage: number): Promise<Student | undefined>;
@@ -48,15 +49,65 @@ export interface IStorage {
   ): Promise<DLApplication | undefined>;
 }
 
-export class MemStorage implements IStorage {
+import fs from "fs";
+import path from "path";
+
+export class FileStorage implements IStorage {
   private students: Map<string, Student>;
   private faculty: Map<string, Faculty>;
   private applications: Map<string, DLApplication>;
+  private filePath: string;
 
   constructor() {
     this.students = new Map();
     this.faculty = new Map();
     this.applications = new Map();
+    this.filePath = path.join(process.cwd(), "database.json");
+    this.loadData();
+  }
+
+  private loadData() {
+    try {
+      if (fs.existsSync(this.filePath)) {
+        const data = fs.readFileSync(this.filePath, "utf-8");
+        const json = JSON.parse(data);
+
+        if (json.students) {
+          this.students = new Map(json.students.map((s: any) => [s.id, { ...s, createdAt: new Date(s.createdAt) }]));
+        }
+        if (json.faculty) {
+          this.faculty = new Map(json.faculty.map((f: any) => [f.id, { ...f, createdAt: new Date(f.createdAt) }]));
+        }
+        if (json.applications) {
+          this.applications = new Map(json.applications.map((a: any) => [
+            a.id,
+            {
+              ...a,
+              createdAt: new Date(a.createdAt),
+              ccDate: a.ccDate ? new Date(a.ccDate) : null,
+              hodDate: a.hodDate ? new Date(a.hodDate) : null,
+              vpDate: a.vpDate ? new Date(a.vpDate) : null
+            }
+          ]));
+        }
+        console.log("📦 Data loaded from database.json");
+      }
+    } catch (error) {
+      console.error("Error loading data from file:", error);
+    }
+  }
+
+  private saveData() {
+    try {
+      const data = {
+        students: Array.from(this.students.values()),
+        faculty: Array.from(this.faculty.values()),
+        applications: Array.from(this.applications.values()),
+      };
+      fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error("Error saving data to file:", error);
+    }
   }
 
   // Student operations
@@ -72,6 +123,10 @@ export class MemStorage implements IStorage {
     return Array.from(this.students.values()).find((s) => s.rollNo === rollNo);
   }
 
+  async getAllStudents(): Promise<Student[]> {
+    return Array.from(this.students.values());
+  }
+
   async createStudent(insertStudent: InsertStudent): Promise<Student> {
     const id = randomUUID();
     const student: Student = {
@@ -81,6 +136,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.students.set(id, student);
+    this.saveData();
     return student;
   }
 
@@ -90,6 +146,7 @@ export class MemStorage implements IStorage {
 
     const updated: Student = { ...student, ...updates };
     this.students.set(id, updated);
+    this.saveData();
     return updated;
   }
 
@@ -105,6 +162,7 @@ export class MemStorage implements IStorage {
       attendancePercentage,
     };
     this.students.set(student.id, updated);
+    this.saveData();
     return updated;
   }
 
@@ -134,6 +192,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.faculty.set(id, facultyMember);
+    this.saveData();
     return facultyMember;
   }
 
@@ -210,6 +269,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date(),
     };
     this.applications.set(id, application);
+    this.saveData();
     return application;
   }
 
@@ -234,6 +294,7 @@ export class MemStorage implements IStorage {
             : "pending",
     };
     this.applications.set(id, updated);
+    this.saveData();
     return updated;
   }
 
@@ -258,6 +319,7 @@ export class MemStorage implements IStorage {
             : "pending",
     };
     this.applications.set(id, updated);
+    this.saveData();
     return updated;
   }
 
@@ -277,8 +339,25 @@ export class MemStorage implements IStorage {
       overallStatus: status === "rejected" ? "rejected" : "approved",
     };
     this.applications.set(id, updated);
+    this.saveData();
     return updated;
   }
 }
 
-export const storage = new MemStorage();
+// Initialize storage based on environment configuration
+import { MongoStorage } from "./mongoStorage";
+
+// Use MongoDB if MONGODB_URI is set, otherwise fall back to file storage
+const useMongoDb = !!process.env.MONGODB_URI;
+
+let storageInstance: IStorage;
+
+if (useMongoDb) {
+  console.log("🔄 Initializing MongoDB storage...");
+  storageInstance = new MongoStorage();
+} else {
+  console.log("📂 Using file-based storage (database.json)");
+  storageInstance = new FileStorage();
+}
+
+export const storage = storageInstance;

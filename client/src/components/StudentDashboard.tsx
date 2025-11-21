@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { FileText, CheckCircle, XCircle, Clock, Plus } from "lucide-react";
 import { StatsCard } from "./StatsCard";
 import { ApplicationCard } from "./ApplicationCard";
+import { ApplicationDetailsDialog } from "./ApplicationDetailsDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getMyApplications } from "@/lib/api";
@@ -12,6 +13,7 @@ interface Application {
   studentName: string;
   rollNo: string;
   department: string;
+  division: string;
   numberOfDays: number;
   reason: string;
   dateFrom: string;
@@ -19,6 +21,17 @@ interface Application {
   overallStatus: string;
   createdAt: string;
   additionalStudents?: string[] | null;
+
+  // Approval tracking
+  ccStatus: string;
+  ccDate: string | null;
+  ccRemarks: string | null;
+  hodStatus: string;
+  hodDate: string | null;
+  hodRemarks: string | null;
+  vpStatus: string;
+  vpDate: string | null;
+  vpRemarks: string | null;
 }
 
 interface StudentDashboardProps {
@@ -29,6 +42,8 @@ interface StudentDashboardProps {
 export function StudentDashboard({ onApplyClick, userId }: StudentDashboardProps) {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,6 +62,14 @@ export function StudentDashboard({ onApplyClick, userId }: StudentDashboardProps
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleViewDetails = (id: string) => {
+    const app = applications.find((a) => a.id === id);
+    if (app) {
+      setSelectedApplication(app);
+      setDetailsDialogOpen(true);
     }
   };
 
@@ -118,7 +141,7 @@ export function StudentDashboard({ onApplyClick, userId }: StudentDashboardProps
               <ApplicationCard
                 key={app.id}
                 application={mapApplication(app)}
-                onView={(id) => console.log("View application:", id)}
+                onView={handleViewDetails}
               />
             ))
           )}
@@ -129,7 +152,7 @@ export function StudentDashboard({ onApplyClick, userId }: StudentDashboardProps
             <ApplicationCard
               key={app.id}
               application={mapApplication(app)}
-              onView={(id) => console.log("View application:", id)}
+              onView={handleViewDetails}
             />
           ))}
         </TabsContent>
@@ -139,7 +162,7 @@ export function StudentDashboard({ onApplyClick, userId }: StudentDashboardProps
             <ApplicationCard
               key={app.id}
               application={mapApplication(app)}
-              onView={(id) => console.log("View application:", id)}
+              onView={handleViewDetails}
             />
           ))}
         </TabsContent>
@@ -149,11 +172,17 @@ export function StudentDashboard({ onApplyClick, userId }: StudentDashboardProps
             <ApplicationCard
               key={app.id}
               application={mapApplication(app)}
-              onView={(id) => console.log("View application:", id)}
+              onView={handleViewDetails}
             />
           ))}
         </TabsContent>
       </Tabs>
+
+      <ApplicationDetailsDialog
+        application={selectedApplication}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+      />
     </div>
   );
 }

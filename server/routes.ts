@@ -645,6 +645,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // Get all students endpoint (for faculty)
+  app.get(
+    "/api/students",
+    authenticateToken,
+    async (req: Request, res: Response) => {
+      try {
+        const user = (req as any).user;
+
+        // Only faculty can view all students
+        if (user.role !== "faculty") {
+          return res.status(403).json({
+            error: "Only faculty members can view all students"
+          });
+        }
+
+        const students = await storage.getAllStudents();
+
+        // Remove sensitive data like passwords
+        const sanitizedStudents = students.map((student) => ({
+          id: student.id,
+          name: student.name,
+          email: student.email,
+          rollNo: student.rollNo,
+          department: student.department,
+          division: student.division,
+          attendancePercentage: student.attendancePercentage,
+          createdAt: student.createdAt,
+        }));
+
+        res.json(sanitizedStudents);
+      } catch (error: any) {
+        res.status(500).json({
+          error: error.message || "Failed to fetch students"
+        });
+      }
+    }
+  );
+
   // DEBUG ENDPOINT - REMOVE LATER
   app.get("/api/debug/users", async (_req, res) => {
     try {
