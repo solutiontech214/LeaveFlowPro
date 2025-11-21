@@ -4,6 +4,7 @@ import { StatsCard } from "./StatsCard";
 import { ApplicationCard } from "./ApplicationCard";
 import { AttendanceUpload } from "./AttendanceUpload";
 import { StudentImport } from "./StudentImport";
+import { StudentList } from "./StudentList";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -164,6 +165,7 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
           <TabsTrigger value="rejected" data-testid="tab-faculty-rejected">Rejected</TabsTrigger>
           <TabsTrigger value="attendance" data-testid="tab-faculty-attendance">Attendance</TabsTrigger>
           <TabsTrigger value="import" data-testid="tab-faculty-import">Import Students</TabsTrigger>
+          <TabsTrigger value="students" data-testid="tab-faculty-students">Students</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pending" className="mt-6 space-y-4">
@@ -209,6 +211,10 @@ export function FacultyDashboard({ facultyType, department }: FacultyDashboardPr
 
         <TabsContent value="import" className="mt-6">
           <StudentImport />
+        </TabsContent>
+
+        <TabsContent value="students" className="mt-6">
+          <StudentList />
         </TabsContent>
       </Tabs>
 

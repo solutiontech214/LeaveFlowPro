@@ -138,3 +138,15 @@ export async function importStudents(
 
   return response.json();
 }
+
+export async function getAllStudents() {
+  const response = await fetch("/api/students", {
+    headers: getAuthHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch students");
+  }
+
+  return response.json();
+}
